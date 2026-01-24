@@ -100,7 +100,7 @@ function App() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono bg-[#3d4d61] px-2 py-1 rounded">v2.1.0</span>
+            <span className="text-xs font-mono bg-[#3d4d61] px-2 py-1 rounded">v{__APP_VERSION__}</span>
             <button
               type="button"
               className="p-2 hover:bg-[#3d4d61] rounded-lg transition-colors"

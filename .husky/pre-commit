@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# 自動增加 patch 版本號
+npm version patch --no-git-tag-version
+
+# 將更新後的 package.json 加入 commit
+git add package.json
