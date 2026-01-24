@@ -38,6 +38,15 @@ function DelayBadge({ delayTime }: { delayTime: number | undefined }) {
   );
 }
 
+// 計算加上延誤後的實際時間
+function addDelayToTime(time: string, delayMinutes: number): string {
+  const [hours, minutes] = time.split(':').map(Number);
+  const totalMinutes = hours * 60 + minutes + delayMinutes;
+  const newHours = Math.floor(totalMinutes / 60) % 24;
+  const newMinutes = totalMinutes % 60;
+  return `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
+}
+
 // 車種顏色對應
 function getTrainTypeStyle(trainTypeCode: string): { bg: string; text: string; accent: string } {
   switch (trainTypeCode) {
@@ -118,12 +127,12 @@ export function TrainList({ trains, loading, error, onTrainClick }: TrainListPro
               {/* 頂部：車種標籤 + 車次 + 行駛時間 */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
+                  <span className="text-[#3b6bdf] font-bold font-mono">
+                    {train.DailyTrainInfo.TrainNo}
+                  </span>
                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-medium ${style.bg} ${style.text}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${style.accent}`}></span>
                     {train.DailyTrainInfo.TrainTypeName.Zh_tw}
-                  </span>
-                  <span className="text-gray-400 text-sm font-mono">
-                    #{train.DailyTrainInfo.TrainNo}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -143,6 +152,11 @@ export function TrainList({ trains, loading, error, onTrainClick }: TrainListPro
                   <div className="text-3xl font-bold text-gray-800 tracking-tight">
                     {train.OriginStopTime.DepartureTime.slice(0, 5)}
                   </div>
+                  {train.DelayTime !== undefined && train.DelayTime > 0 && (
+                    <div className="text-base text-red-500 mt-0.5">
+                      {addDelayToTime(train.OriginStopTime.DepartureTime, train.DelayTime)}
+                    </div>
+                  )}
                   <div className="text-sm text-gray-400 mt-0.5">
                     {train.OriginStopTime.StationName.Zh_tw}
                   </div>
@@ -165,6 +179,11 @@ export function TrainList({ trains, loading, error, onTrainClick }: TrainListPro
                   <div className="text-3xl font-bold text-gray-800 tracking-tight">
                     {train.DestinationStopTime.ArrivalTime.slice(0, 5)}
                   </div>
+                  {train.DelayTime !== undefined && train.DelayTime > 0 && (
+                    <div className="text-base text-red-500 mt-0.5">
+                      {addDelayToTime(train.DestinationStopTime.ArrivalTime, train.DelayTime)}
+                    </div>
+                  )}
                   <div className="text-sm text-gray-400 mt-0.5">
                     {train.DestinationStopTime.StationName.Zh_tw}
                   </div>
