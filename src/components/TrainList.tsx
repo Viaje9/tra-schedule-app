@@ -9,41 +9,49 @@ interface TrainListProps {
 }
 
 // 車種顏色對應
-function getTrainTypeColor(trainTypeCode: string): string {
+function getTrainTypeStyle(trainTypeCode: string): { bg: string; text: string; accent: string } {
   switch (trainTypeCode) {
     case '1': // 太魯閣
-      return 'bg-red-100 text-red-800';
+      return { bg: 'bg-rose-50', text: 'text-rose-700', accent: 'bg-rose-500' };
     case '2': // 普悠瑪
-      return 'bg-orange-100 text-orange-800';
+      return { bg: 'bg-orange-50', text: 'text-orange-700', accent: 'bg-orange-500' };
     case '3': // 自強
-      return 'bg-blue-100 text-blue-800';
+      return { bg: 'bg-blue-50', text: 'text-blue-700', accent: 'bg-blue-500' };
     case '4': // 莒光
-      return 'bg-green-100 text-green-800';
+      return { bg: 'bg-emerald-50', text: 'text-emerald-700', accent: 'bg-emerald-500' };
     case '5': // 復興
-      return 'bg-purple-100 text-purple-800';
+      return { bg: 'bg-violet-50', text: 'text-violet-700', accent: 'bg-violet-500' };
     case '6': // 區間
-      return 'bg-gray-100 text-gray-800';
+      return { bg: 'bg-slate-50', text: 'text-slate-600', accent: 'bg-slate-400' };
     case '7': // 區間快
-      return 'bg-teal-100 text-teal-800';
+      return { bg: 'bg-cyan-50', text: 'text-cyan-700', accent: 'bg-cyan-500' };
     default:
-      return 'bg-gray-100 text-gray-800';
+      return { bg: 'bg-gray-50', text: 'text-gray-600', accent: 'bg-gray-400' };
   }
 }
 
 export function TrainList({ trains, loading, error, onTrainClick }: TrainListProps) {
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-3 text-gray-600">查詢中...</span>
+      <div className="flex flex-col items-center justify-center py-16">
+        <div className="relative">
+          <div className="w-12 h-12 border-2 border-[#3b6bdf]/20 rounded-full"></div>
+          <div className="absolute top-0 left-0 w-12 h-12 border-2 border-[#3b6bdf] border-t-transparent rounded-full animate-spin"></div>
+        </div>
+        <span className="mt-4 text-gray-500">查詢班次中...</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-        {error}
+      <div className="bg-red-50 border border-red-100 rounded-xl p-4 text-red-600 text-sm animate-fade-in">
+        <div className="flex items-start gap-3">
+          <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>{error}</span>
+        </div>
       </div>
     );
   }
@@ -53,63 +61,78 @@ export function TrainList({ trains, loading, error, onTrainClick }: TrainListPro
   }
 
   return (
-    <div className="space-y-3">
-      <h2 className="text-lg font-semibold text-gray-800">
-        查詢結果（共 {trains.length} 班次）
-      </h2>
-      <div className="space-y-2">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-gray-800">
+          查詢結果
+        </h2>
+        <span className="text-sm text-gray-400">
+          共 {trains.length} 班次
+        </span>
+      </div>
+      <div className="space-y-3">
         {trains.map((train) => {
           const duration = calculateDuration(
             train.OriginStopTime.DepartureTime,
             train.DestinationStopTime.ArrivalTime
           );
+          const style = getTrainTypeStyle(train.DailyTrainInfo.TrainTypeCode);
 
           return (
             <button
               key={train.DailyTrainInfo.TrainNo}
               type="button"
-              className="w-full bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-blue-300 transition-all text-left"
+              className="train-card w-full bg-white rounded-xl p-4 hover:shadow-lg hover:shadow-gray-200/50 transition-all duration-200 text-left border border-gray-100 group"
               onClick={() => onTrainClick(train.DailyTrainInfo.TrainNo, train.TrainDate)}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`px-2 py-1 rounded text-sm font-medium ${getTrainTypeColor(
-                      train.DailyTrainInfo.TrainTypeCode
-                    )}`}
-                  >
+              {/* 頂部：車種標籤 + 車次 + 行駛時間 */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-medium ${style.bg} ${style.text}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${style.accent}`}></span>
                     {train.DailyTrainInfo.TrainTypeName.Zh_tw}
                   </span>
-                  <span className="text-gray-600 text-sm">
-                    {train.DailyTrainInfo.TrainNo}
+                  <span className="text-gray-400 text-sm font-mono">
+                    #{train.DailyTrainInfo.TrainNo}
                   </span>
                 </div>
-                <span className="text-gray-500 text-sm">{duration}</span>
+                <div className="flex items-center gap-1.5 text-gray-400 text-sm">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{duration}</span>
+                </div>
               </div>
 
-              <div className="mt-3 flex items-center">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-800">
+              {/* 時間與站名 */}
+              <div className="flex items-center">
+                <div className="flex-1">
+                  <div className="text-3xl font-bold text-gray-800 tracking-tight">
                     {train.OriginStopTime.DepartureTime.slice(0, 5)}
                   </div>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-gray-400 mt-0.5">
                     {train.OriginStopTime.StationName.Zh_tw}
                   </div>
                 </div>
 
-                <div className="flex-1 mx-4">
-                  <div className="border-t-2 border-dashed border-gray-300 relative">
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-400">
-                      →
+                <div className="flex-1 px-4">
+                  <div className="relative flex items-center justify-center">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t-2 border-dashed border-gray-200"></div>
+                    </div>
+                    <div className="relative bg-white px-2">
+                      <svg className="w-5 h-5 text-gray-300 group-hover:text-[#3b6bdf] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                      </svg>
                     </div>
                   </div>
                 </div>
 
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-800">
+                <div className="flex-1 text-right">
+                  <div className="text-3xl font-bold text-gray-800 tracking-tight">
                     {train.DestinationStopTime.ArrivalTime.slice(0, 5)}
                   </div>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-gray-400 mt-0.5">
                     {train.DestinationStopTime.StationName.Zh_tw}
                   </div>
                 </div>

@@ -1,6 +1,6 @@
 import type { Station, DailyTrainTimetable, TrainTimetable } from '../types/train';
 
-const BASE_URL = 'https://tdx.transportdata.tw/api/basic/v2/Rail/TRA';
+const BASE_URL = 'https://tdx.transportdata.tw/api/basic/v3/Rail/TRA';
 const AUTH_URL = 'https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token';
 
 // TDX 認證資訊
@@ -100,6 +100,17 @@ const getHeaders = async () => {
   return headers;
 };
 
+// 從地址解析城市名稱
+function parseCityFromAddress(address: string | undefined): string | undefined {
+  if (!address) return undefined;
+
+  // 地址格式: "郵遞區號(5-6碼)城市名區名地址"
+  // 例如: "203001基隆市中山區中山一路 16 之 1 號"
+  // 例如: "41456臺中市烏日區三和里高鐵東一路 26 號"
+  const match = address.match(/^\d{5,6}(.+?[市縣])/);
+  return match ? match[1] : undefined;
+}
+
 // 取得所有車站資料
 export async function fetchStations(): Promise<Station[]> {
   const response = await fetch(`${BASE_URL}/Station?$format=JSON`, {
@@ -110,7 +121,24 @@ export async function fetchStations(): Promise<Station[]> {
     throw new Error(`取得車站資料失敗: ${response.status}`);
   }
 
-  return response.json();
+  const data = await response.json();
+
+  // v3 API 返回格式: { Stations: [...] }
+  // v2 API 返回格式: [...]
+  let stations: Station[];
+  if (Array.isArray(data)) {
+    stations = data;
+  } else if (data.Stations && Array.isArray(data.Stations)) {
+    stations = data.Stations;
+  } else {
+    throw new Error('無法解析車站資料');
+  }
+
+  // v3 API 沒有 LocationCity，從 StationAddress 解析
+  return stations.map(station => ({
+    ...station,
+    LocationCity: station.LocationCity || parseCityFromAddress(station.StationAddress),
+  }));
 }
 
 // 站對站時刻表查詢
@@ -129,11 +157,76 @@ export async function fetchODTimetable(
     headers: await getHeaders(),
   });
 
+  // 處理錯誤回應
   if (!response.ok) {
-    throw new Error(`查詢班次失敗: ${response.status}`);
+    if (response.status === 404) {
+      throw new Error('查無班次資料，請確認起訖站是否有直達車');
+    }
+    if (response.status === 401) {
+      throw new Error('API 認證失敗，請檢查 Client ID 和 Secret');
+    }
+    throw new Error(`查詢班次失敗 (${response.status})`);
   }
 
-  return response.json();
+  const data = await response.json();
+
+  // v3 API 返回格式: { TrainTimetables: [{TrainInfo, StopTimes}, ...] }
+  // v2 API 返回格式: [{DailyTrainInfo, OriginStopTime, DestinationStopTime}, ...]
+  let rawTimetables: any[];
+
+  if (Array.isArray(data)) {
+    rawTimetables = data;
+  } else if (data.TrainTimetables && Array.isArray(data.TrainTimetables)) {
+    rawTimetables = data.TrainTimetables;
+  } else if (data?.message) {
+    throw new Error('查無班次資料，請確認起訖站是否有直達車');
+  } else {
+    return [];
+  }
+
+  // 轉換 v3 格式到 v2 格式
+  const timetables = rawTimetables.map((item: any) => {
+    // 檢查是否為 v3 格式 (有 TrainInfo 和 StopTimes)
+    if (item.TrainInfo && item.StopTimes) {
+      const stopTimes = item.StopTimes;
+      const originStop = stopTimes[0];
+      const destStop = stopTimes[stopTimes.length - 1];
+
+      return {
+        TrainDate: trainDate,
+        DailyTrainInfo: {
+          TrainNo: item.TrainInfo.TrainNo,
+          Direction: item.TrainInfo.Direction,
+          TrainTypeID: item.TrainInfo.TrainTypeID,
+          TrainTypeCode: item.TrainInfo.TrainTypeCode,
+          TrainTypeName: item.TrainInfo.TrainTypeName,
+        },
+        OriginStopTime: {
+          StopSequence: originStop.StopSequence,
+          StationID: originStop.StationID,
+          StationName: originStop.StationName,
+          ArrivalTime: originStop.ArrivalTime,
+          DepartureTime: originStop.DepartureTime,
+        },
+        DestinationStopTime: {
+          StopSequence: destStop.StopSequence,
+          StationID: destStop.StationID,
+          StationName: destStop.StationName,
+          ArrivalTime: destStop.ArrivalTime,
+          DepartureTime: destStop.DepartureTime,
+        },
+      };
+    }
+    // 已經是 v2 格式
+    return item;
+  });
+
+  // 按出發時間排序
+  return timetables.sort((a, b) => {
+    const timeA = a.OriginStopTime.DepartureTime;
+    const timeB = b.OriginStopTime.DepartureTime;
+    return timeA.localeCompare(timeB);
+  });
 }
 
 // 車次詳細時刻表查詢
@@ -151,7 +244,18 @@ export async function fetchTrainTimetable(
     throw new Error(`查詢車次詳情失敗: ${response.status}`);
   }
 
-  return response.json();
+  const data = await response.json();
+
+  // v3 API 返回格式: { TrainTimetables: [...] }
+  // v2 API 返回格式: [...]
+  if (Array.isArray(data)) {
+    return data;
+  }
+  if (data.TrainTimetables && Array.isArray(data.TrainTimetables)) {
+    return data.TrainTimetables;
+  }
+
+  return [];
 }
 
 // 計算行駛時間
