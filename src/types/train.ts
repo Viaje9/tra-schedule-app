@@ -108,6 +108,23 @@ export interface StationLiveBoardItem {
   DelayTime: number; // 延誤分鐘數
 }
 
+// 列車即時位置動態資料（TrainLiveBoard）
+export interface TrainLiveBoardItem {
+  TrainNo: string;
+  TrainTypeID: string;
+  TrainTypeCode: string;
+  TrainTypeName: {
+    Zh_tw: string;
+    En: string;
+  };
+  StationID: string; // 最近停靠車站
+  StationName: {
+    Zh_tw: string;
+    En: string;
+  };
+  DelayTime: number; // 延誤分鐘數
+}
+
 // 車次詳細時刻表
 export interface TrainTimetable {
   TrainDate: string;

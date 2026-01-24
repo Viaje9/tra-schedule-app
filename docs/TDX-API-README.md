@@ -164,13 +164,13 @@ TDX API 支援 OData 查詢語法：
 | ✅ 已使用 | `/Station` | 取得車站資料 |
 | ✅ 已使用 | `/DailyTrainTimetable/OD/...` | 站對站班次查詢 |
 | ✅ 已使用 | `/DailyTrainTimetable/TrainNo/...` | 車次詳細時刻表 |
+| ✅ 已使用 | `/StationLiveBoard/Station/{車站ID}` | 特定車站即時到離站資料 |
+| ✅ 已使用 | `/TrainLiveBoard` | 全線列車即時位置動態 |
 
 ### 可考慮擴充的 API
 
 | API | 功能 | 應用場景 |
 |-----|------|---------|
-| `/StationLiveBoard` | 即時到離站 | 顯示列車即時動態 |
-| `/TrainLiveBoard` | 列車即時位置 | 列車追蹤地圖 |
 | `/ODFare` | 票價查詢 | 顯示車票價格 |
 | `/TrainType` | 車種資料 | 車種圖示/顏色對應 |
 

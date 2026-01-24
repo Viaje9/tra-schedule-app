@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Station, DailyTrainTimetable, TrainTimetable } from '../types/train';
-import { fetchStations, fetchODTimetable, fetchTrainTimetable, fetchStationLiveBoard, mergeDelayInfo, getTodayDate } from '../api/tdx';
+import { fetchStations, fetchODTimetable, fetchTrainTimetable, fetchStationLiveBoard, fetchTrainLiveBoard, mergeDelayInfo, getTodayDate } from '../api/tdx';
 
 // 車站資料 Hook
 export function useStations() {
@@ -43,14 +43,16 @@ export function useODQuery() {
       setLoading(true);
       setError(null);
 
-      // 同時請求時刻表和即時資料
-      const [timetableData, liveBoardData] = await Promise.all([
+      // 同時請求時刻表和即時資料（StationLiveBoard + TrainLiveBoard）
+      const [timetableData, stationLiveBoardData, trainLiveBoardData] = await Promise.all([
         fetchODTimetable(originStationId, destinationStationId, trainDate),
         fetchStationLiveBoard(originStationId),
+        fetchTrainLiveBoard(),
       ]);
 
       // 合併延誤資訊（即時資料失敗不影響時刻表顯示）
-      const mergedData = mergeDelayInfo(timetableData, liveBoardData);
+      // StationLiveBoard 優先，TrainLiveBoard 作為補充
+      const mergedData = mergeDelayInfo(timetableData, stationLiveBoardData, trainLiveBoardData);
       setTrains(mergedData);
     } catch (err) {
       setError(err instanceof Error ? err.message : '查詢班次失敗');

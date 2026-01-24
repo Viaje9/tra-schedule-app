@@ -40,3 +40,14 @@ TBD - created by archiving change add-realtime-delay-info. Update Purpose after 
 - **WHEN** 快取資料超過 2 分鐘
 - **THEN** 重新請求 StationLiveBoard API 並更新快取
 
+### Requirement: TrainLiveBoard Data Caching
+系統 SHALL 快取 TrainLiveBoard 資料以減少 API 請求次數。
+
+#### Scenario: TrainLiveBoard 快取有效期間
+- **WHEN** TrainLiveBoard 資料在 2 分鐘內已取得
+- **THEN** 直接使用快取資料，不重新請求 API
+
+#### Scenario: TrainLiveBoard 快取過期
+- **WHEN** 快取資料超過 2 分鐘
+- **THEN** 重新請求 TrainLiveBoard API 並更新快取
+

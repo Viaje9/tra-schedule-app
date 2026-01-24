@@ -1,4 +1,4 @@
-import type { Station, DailyTrainTimetable, TrainTimetable, StationLiveBoardItem } from '../types/train';
+import type { Station, DailyTrainTimetable, TrainTimetable, StationLiveBoardItem, TrainLiveBoardItem } from '../types/train';
 
 const BASE_URL = 'https://tdx.transportdata.tw/api/basic/v3/Rail/TRA';
 const AUTH_URL = 'https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token';
@@ -341,14 +341,75 @@ export async function fetchStationLiveBoard(stationId: string): Promise<StationL
   }
 }
 
-// 將延誤資訊合併到時刻表
+// TrainLiveBoard 快取（2 分鐘過期，與 StationLiveBoard 分開）
+interface TrainLiveBoardCache {
+  data: TrainLiveBoardItem[];
+  timestamp: number;
+}
+let trainLiveBoardCache: TrainLiveBoardCache | null = null;
+
+// 取得全線列車即時位置動態資料
+export async function fetchTrainLiveBoard(): Promise<TrainLiveBoardItem[]> {
+  // 檢查快取
+  if (trainLiveBoardCache && Date.now() - trainLiveBoardCache.timestamp < CACHE_TTL) {
+    return trainLiveBoardCache.data;
+  }
+
+  const url = `${BASE_URL}/TrainLiveBoard?$format=JSON`;
+
+  try {
+    const response = await fetch(url, {
+      headers: await getHeaders(),
+    });
+
+    if (!response.ok) {
+      console.warn(`取得列車即時位置失敗: ${response.status}`);
+      return [];
+    }
+
+    const data = await response.json();
+
+    // v3 API 返回格式: { TrainLiveBoards: [...] }
+    // v2 API 返回格式: [...]
+    let liveBoards: TrainLiveBoardItem[];
+    if (Array.isArray(data)) {
+      liveBoards = data;
+    } else if (data.TrainLiveBoards && Array.isArray(data.TrainLiveBoards)) {
+      liveBoards = data.TrainLiveBoards;
+    } else {
+      liveBoards = [];
+    }
+
+    // 更新快取
+    trainLiveBoardCache = {
+      data: liveBoards,
+      timestamp: Date.now(),
+    };
+
+    return liveBoards;
+  } catch (error) {
+    console.warn('取得列車即時位置失敗:', error);
+    return [];
+  }
+}
+
+// 將延誤資訊合併到時刻表（支援雙資料源）
 export function mergeDelayInfo(
   timetables: DailyTrainTimetable[],
-  liveBoards: StationLiveBoardItem[]
+  stationLiveBoards: StationLiveBoardItem[],
+  trainLiveBoards: TrainLiveBoardItem[] = []
 ): DailyTrainTimetable[] {
   // 建立車次對應延誤時間的 Map
+  // 優先使用 StationLiveBoard 資料，若無則使用 TrainLiveBoard
   const delayMap = new Map<string, number>();
-  for (const item of liveBoards) {
+
+  // 先加入 TrainLiveBoard 資料（較不精準）
+  for (const item of trainLiveBoards) {
+    delayMap.set(item.TrainNo, item.DelayTime);
+  }
+
+  // 再加入 StationLiveBoard 資料（較精準，會覆蓋 TrainLiveBoard）
+  for (const item of stationLiveBoards) {
     delayMap.set(item.TrainNo, item.DelayTime);
   }
 
