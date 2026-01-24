@@ -1,3 +1,4 @@
+import { useState, useMemo, useEffect, useRef } from 'react';
 import type { DailyTrainTimetable } from '../types/train';
 import { calculateDuration } from '../api/tdx';
 
@@ -5,7 +6,11 @@ interface TrainListProps {
   trains: DailyTrainTimetable[];
   loading: boolean;
   error: string | null;
+  trainDate: string;
 }
+
+// 所有車型代碼
+const ALL_TRAIN_TYPES = ['1', '2', '3', '4', '5', '6', '7', '10', '11'] as const;
 
 // 延誤狀態標籤
 function DelayBadge({ delayTime }: { delayTime: number | undefined }) {
@@ -37,6 +42,16 @@ function DelayBadge({ delayTime }: { delayTime: number | undefined }) {
   );
 }
 
+// 已發車標籤
+function DepartedBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-600">
+      <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+      已發車
+    </span>
+  );
+}
+
 // 計算加上延誤後的實際時間
 function addDelayToTime(time: string, delayMinutes: number): string {
   const [hours, minutes] = time.split(':').map(Number);
@@ -44,6 +59,25 @@ function addDelayToTime(time: string, delayMinutes: number): string {
   const newHours = Math.floor(totalMinutes / 60) % 24;
   const newMinutes = totalMinutes % 60;
   return `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
+}
+
+// 判斷列車是否已發車
+function isDeparted(train: DailyTrainTimetable, trainDate: string): boolean {
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+
+  // 只有查詢日期是今天才需要判斷已發車
+  if (trainDate !== todayStr) {
+    return false;
+  }
+
+  const depTime = train.OriginStopTime.DepartureTime;
+  const delayMinutes = train.DelayTime ?? 0;
+  const actualDepTime = addDelayToTime(depTime, delayMinutes);
+
+  const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+  return actualDepTime < currentTime;
 }
 
 // 車種簡稱對應
@@ -88,7 +122,95 @@ function getTrainTypeStyle(trainTypeCode: string): { bg: string; text: string; a
   }
 }
 
-export function TrainList({ trains, loading, error }: TrainListProps) {
+// localStorage keys
+const STORAGE_KEY_TRAIN_TYPES = 'tra-filter-train-types';
+const STORAGE_KEY_SHOW_DEPARTED = 'tra-filter-show-departed';
+
+// 從 localStorage 讀取過濾設定
+function loadFilterSettings(): { trainTypes: Set<string>; showDeparted: boolean } {
+  try {
+    const savedTypes = localStorage.getItem(STORAGE_KEY_TRAIN_TYPES);
+    const savedShowDeparted = localStorage.getItem(STORAGE_KEY_SHOW_DEPARTED);
+
+    const trainTypes = savedTypes
+      ? new Set<string>(JSON.parse(savedTypes))
+      : new Set(ALL_TRAIN_TYPES);
+    const showDeparted = savedShowDeparted !== null
+      ? JSON.parse(savedShowDeparted)
+      : true;
+
+    return { trainTypes, showDeparted };
+  } catch {
+    return { trainTypes: new Set(ALL_TRAIN_TYPES), showDeparted: true };
+  }
+}
+
+export function TrainList({ trains, loading, error, trainDate }: TrainListProps) {
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [selectedTrainTypes, setSelectedTrainTypes] = useState<Set<string>>(() => loadFilterSettings().trainTypes);
+  const [showDeparted, setShowDeparted] = useState(() => loadFilterSettings().showDeparted);
+  const firstAvailableRef = useRef<HTMLDivElement>(null);
+  const prevTrainsLength = useRef(0);
+
+  // 儲存過濾設定到 localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_TRAIN_TYPES, JSON.stringify([...selectedTrainTypes]));
+  }, [selectedTrainTypes]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_SHOW_DEPARTED, JSON.stringify(showDeparted));
+  }, [showDeparted]);
+
+  // 過濾列車
+  const filteredTrains = useMemo(() => {
+    return trains.filter((train) => {
+      // 車型過濾
+      if (!selectedTrainTypes.has(train.DailyTrainInfo.TrainTypeCode)) {
+        return false;
+      }
+      // 已發車過濾
+      if (!showDeparted && isDeparted(train, trainDate)) {
+        return false;
+      }
+      return true;
+    });
+  }, [trains, selectedTrainTypes, showDeparted, trainDate]);
+
+  // 找出第一個未發車列車的索引
+  const firstAvailableIndex = useMemo(() => {
+    return filteredTrains.findIndex((train) => !isDeparted(train, trainDate));
+  }, [filteredTrains, trainDate]);
+
+  // 查詢完成後滾動到第一個未發車的列車
+  useEffect(() => {
+    if (trains.length > 0 && prevTrainsLength.current === 0 && firstAvailableRef.current) {
+      firstAvailableRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    prevTrainsLength.current = trains.length;
+  }, [trains.length]);
+
+  const handleToggleTrainType = (typeCode: string) => {
+    setSelectedTrainTypes((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(typeCode)) {
+        newSet.delete(typeCode);
+      } else {
+        newSet.add(typeCode);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    setSelectedTrainTypes(new Set(ALL_TRAIN_TYPES));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedTrainTypes(new Set());
+  };
+
+  const isAllSelected = selectedTrainTypes.size === ALL_TRAIN_TYPES.length;
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
@@ -124,33 +246,114 @@ export function TrainList({ trains, loading, error }: TrainListProps) {
         <h2 className="text-lg font-semibold text-gray-800">
           查詢結果
         </h2>
-        <span className="text-sm text-gray-400">
-          共 {trains.length} 班次
-        </span>
+        <div className="flex items-center gap-3">
+          {/* 過濾按鈕 */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowFilterMenu(!showFilterMenu)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                showFilterMenu || !isAllSelected || !showDeparted
+                  ? 'bg-[#3b6bdf] text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              過濾
+            </button>
+
+            {/* 過濾選單 */}
+            {showFilterMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowFilterMenu(false)}
+                />
+                <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-100 z-20 p-4">
+                  {/* 車型過濾 */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700">車型</span>
+                      <button
+                        type="button"
+                        onClick={isAllSelected ? handleDeselectAll : handleSelectAll}
+                        className="text-xs text-[#3b6bdf] hover:underline"
+                      >
+                        {isAllSelected ? '取消全選' : '全選'}
+                      </button>
+                    </div>
+                    <div className="space-y-1.5">
+                      {ALL_TRAIN_TYPES.map((typeCode) => (
+                        <label
+                          key={typeCode}
+                          className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded px-2 py-1 -mx-2"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedTrainTypes.has(typeCode)}
+                            onChange={() => handleToggleTrainType(typeCode)}
+                            className="w-4 h-4 rounded border-gray-300 text-[#3b6bdf] focus:ring-[#3b6bdf]"
+                          />
+                          <span className="text-sm text-gray-600">{getTrainTypeName(typeCode)}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 分隔線 */}
+                  <div className="border-t border-gray-100 my-3"></div>
+
+                  {/* 顯示已過站 */}
+                  <label className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded px-2 py-1 -mx-2">
+                    <input
+                      type="checkbox"
+                      checked={showDeparted}
+                      onChange={(e) => setShowDeparted(e.target.checked)}
+                      className="w-4 h-4 rounded border-gray-300 text-[#3b6bdf] focus:ring-[#3b6bdf]"
+                    />
+                    <span className="text-sm text-gray-600">顯示已過站</span>
+                  </label>
+                </div>
+              </>
+            )}
+          </div>
+
+          <span className="text-sm text-gray-400">
+            共 {filteredTrains.length} 班次
+          </span>
+        </div>
       </div>
       <div className="space-y-3">
-        {trains.map((train) => {
+        {filteredTrains.map((train, index) => {
           const duration = calculateDuration(
             train.OriginStopTime.DepartureTime,
             train.DestinationStopTime.ArrivalTime
           );
           const style = getTrainTypeStyle(train.DailyTrainInfo.TrainTypeCode);
+          const departed = isDeparted(train, trainDate);
+          const isFirstAvailable = index === firstAvailableIndex;
 
           return (
             <div
               key={train.DailyTrainInfo.TrainNo}
-              className="train-card w-full bg-white rounded-xl p-4 border border-gray-100"
+              ref={isFirstAvailable ? firstAvailableRef : undefined}
+              className={`train-card w-full bg-white rounded-xl p-4 border border-gray-100 ${departed ? 'opacity-60' : ''}`}
             >
               {/* 頂部：車種標籤 + 車次 + 行駛時間 */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-[#3b6bdf] font-bold font-mono">
-                    {train.DailyTrainInfo.TrainNo}
-                  </span>
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-medium ${style.bg} ${style.text}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${style.accent}`}></span>
-                    {getTrainTypeName(train.DailyTrainInfo.TrainTypeCode)}
-                  </span>
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex flex-col items-start gap-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#3b6bdf] font-bold font-mono">
+                      {train.DailyTrainInfo.TrainNo}
+                    </span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-medium ${style.bg} ${style.text}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${style.accent}`}></span>
+                      {getTrainTypeName(train.DailyTrainInfo.TrainTypeCode)}
+                    </span>
+                  </div>
+                  {departed && <DepartedBadge />}
                 </div>
                 <div className="flex items-center gap-2">
                   <DelayBadge delayTime={train.DelayTime} />

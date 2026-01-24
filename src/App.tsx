@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { DatePicker } from './components/DatePicker';
 import { TimeRangePicker } from './components/TimeRangePicker';
 import { TrainList } from './components/TrainList';
@@ -18,17 +18,19 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showStationPicker, setShowStationPicker] = useState(false);
   const [, forceUpdate] = useState({});
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // 監聽滾動，決定是否顯示回到頂部按鈕
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 200);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const { stations, loading: stationsLoading, error: stationsError } = useStations();
   const { trains, loading: trainsLoading, error: trainsError, query: queryTrains } = useODQuery();
-  const resultsRef = useRef<HTMLDivElement>(null);
-
-  // 查詢完成後自動滾動到結果區域
-  useEffect(() => {
-    if (!trainsLoading && trains.length > 0 && resultsRef.current) {
-      resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, [trainsLoading, trains]);
   const { routes, addRoute, removeRoute, hasRoute, canAddMore, maxRoutes } = useFavoriteRoutes();
 
   const originStationName = useMemo(
@@ -244,7 +246,6 @@ function App() {
         </div>
 
         {/* 查詢結果 */}
-        <div ref={resultsRef} />
         {trains.length === 0 && !trainsLoading && !trainsError && (
           <div className="text-center py-16 animate-fade-in">
             <div className="text-gray-300 mb-4">
@@ -260,6 +261,7 @@ function App() {
           trains={filteredTrains}
           loading={trainsLoading}
           error={trainsError}
+          trainDate={trainDate}
         />
       </main>
 
@@ -282,9 +284,27 @@ function App() {
       />
 
       {/* Footer */}
-      <footer className="text-center py-6 text-gray-400 text-xs">
+      <footer
+        className="text-center pt-6 text-gray-400 text-xs"
+        style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}
+      >
         <p>資料來源：TDX 運輸資料流通服務平台</p>
       </footer>
+
+      {/* 回到頂部按鈕 */}
+      {showScrollTop && (
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed right-6 w-12 h-12 bg-white rounded-full shadow-lg shadow-gray-300/50 border border-gray-100 flex items-center justify-center text-gray-500 hover:text-[#3b6bdf] hover:border-[#3b6bdf]/20 transition-colors"
+          style={{ bottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))' }}
+          title="回到頂部"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
