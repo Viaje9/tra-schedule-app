@@ -13,16 +13,6 @@ export function DatePicker({ value, onChange }: DatePickerProps) {
   maxDate.setDate(maxDate.getDate() + 60);
   const maxDateStr = maxDate.toISOString().split('T')[0];
 
-  // 格式化日期顯示
-  const formatDisplayDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('zh-TW', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).replace(/\//g, '/');
-  };
-
   return (
     <div className="relative">
       <div className="flex items-center gap-3 py-3 px-4 bg-white border border-gray-200 rounded-xl hover:border-gray-300 transition-colors">

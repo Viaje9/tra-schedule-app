@@ -36,7 +36,7 @@ function WheelPicker({ value, onChange, onClose }: WheelPickerProps) {
   const [selectedHour, setSelectedHour] = useState(value >= 0 ? value : 12);
   const isTouchingRef = useRef(false);
   const isAnimatingRef = useRef(false);
-  const settleTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const settleTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // 建立循環資料：複製 3 組
   const items = [...HOURS, ...HOURS, ...HOURS];
