@@ -3,5 +3,5 @@
 # 自動增加 patch 版本號
 npm version patch --no-git-tag-version
 
-# 將更新後的 package.json 加入 commit
-git add package.json
+# 將更新後的 package.json 和 package-lock.json 加入 commit
+git add package.json package-lock.json
