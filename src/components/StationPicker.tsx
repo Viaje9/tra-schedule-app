@@ -151,7 +151,7 @@ export function StationPicker({
   return (
     <div className="fixed inset-0 bg-[#f3f4f6] z-50 flex flex-col">
       {/* Header */}
-      <div className="bg-[#2d3a4a] text-white px-4 py-3 flex items-center justify-between">
+      <div className="bg-[#2d3a4a] text-white px-4 py-3 flex items-center justify-between safe-area-top">
         <button onClick={onClose} className="p-1 hover:bg-[#3d4d61] rounded-lg transition-colors">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
