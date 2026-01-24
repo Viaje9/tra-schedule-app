@@ -1,4 +1,4 @@
-import type { Station, DailyTrainTimetable, TrainTimetable } from '../types/train';
+import type { Station, DailyTrainTimetable, TrainTimetable, StationLiveBoardItem } from '../types/train';
 
 const BASE_URL = 'https://tdx.transportdata.tw/api/basic/v3/Rail/TRA';
 const AUTH_URL = 'https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token';
@@ -283,4 +283,78 @@ export function calculateDuration(departureTime: string, arrivalTime: string): s
 export function getTodayDate(): string {
   const today = new Date();
   return today.toISOString().split('T')[0];
+}
+
+// ========== 即時資料 API ==========
+
+// StationLiveBoard 快取（2 分鐘過期）
+interface LiveBoardCache {
+  data: StationLiveBoardItem[];
+  timestamp: number;
+}
+const liveBoardCache: Map<string, LiveBoardCache> = new Map();
+const CACHE_TTL = 2 * 60 * 1000; // 2 分鐘
+
+// 取得車站即時到離站資料
+export async function fetchStationLiveBoard(stationId: string): Promise<StationLiveBoardItem[]> {
+  // 檢查快取
+  const cached = liveBoardCache.get(stationId);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+
+  const url = `${BASE_URL}/StationLiveBoard/Station/${stationId}?$format=JSON`;
+
+  try {
+    const response = await fetch(url, {
+      headers: await getHeaders(),
+    });
+
+    if (!response.ok) {
+      console.warn(`取得即時資料失敗: ${response.status}`);
+      return [];
+    }
+
+    const data = await response.json();
+
+    // v3 API 返回格式: { StationLiveBoards: [...] }
+    // v2 API 返回格式: [...]
+    let liveBoards: StationLiveBoardItem[];
+    if (Array.isArray(data)) {
+      liveBoards = data;
+    } else if (data.StationLiveBoards && Array.isArray(data.StationLiveBoards)) {
+      liveBoards = data.StationLiveBoards;
+    } else {
+      liveBoards = [];
+    }
+
+    // 更新快取
+    liveBoardCache.set(stationId, {
+      data: liveBoards,
+      timestamp: Date.now(),
+    });
+
+    return liveBoards;
+  } catch (error) {
+    console.warn('取得即時資料失敗:', error);
+    return [];
+  }
+}
+
+// 將延誤資訊合併到時刻表
+export function mergeDelayInfo(
+  timetables: DailyTrainTimetable[],
+  liveBoards: StationLiveBoardItem[]
+): DailyTrainTimetable[] {
+  // 建立車次對應延誤時間的 Map
+  const delayMap = new Map<string, number>();
+  for (const item of liveBoards) {
+    delayMap.set(item.TrainNo, item.DelayTime);
+  }
+
+  // 合併延誤資訊
+  return timetables.map(train => ({
+    ...train,
+    DelayTime: delayMap.get(train.DailyTrainInfo.TrainNo),
+  }));
 }

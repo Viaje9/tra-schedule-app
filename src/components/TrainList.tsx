@@ -8,6 +8,36 @@ interface TrainListProps {
   onTrainClick: (trainNo: string, trainDate: string) => void;
 }
 
+// 延誤狀態標籤
+function DelayBadge({ delayTime }: { delayTime: number | undefined }) {
+  if (delayTime === undefined) {
+    return null;
+  }
+
+  if (delayTime === 0) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-600">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+        準點
+      </span>
+    );
+  }
+
+  // 延誤 10 分鐘以上用紅色，否則用橘色
+  const isSerious = delayTime >= 10;
+  const colorClasses = isSerious
+    ? 'bg-red-50 text-red-600'
+    : 'bg-amber-50 text-amber-600';
+  const dotColor = isSerious ? 'bg-red-500' : 'bg-amber-500';
+
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${colorClasses}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`}></span>
+      延誤 {delayTime} 分
+    </span>
+  );
+}
+
 // 車種顏色對應
 function getTrainTypeStyle(trainTypeCode: string): { bg: string; text: string; accent: string } {
   switch (trainTypeCode) {
@@ -96,11 +126,14 @@ export function TrainList({ trains, loading, error, onTrainClick }: TrainListPro
                     #{train.DailyTrainInfo.TrainNo}
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 text-gray-400 text-sm">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>{duration}</span>
+                <div className="flex items-center gap-2">
+                  <DelayBadge delayTime={train.DelayTime} />
+                  <div className="flex items-center gap-1.5 text-gray-400 text-sm">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>{duration}</span>
+                  </div>
                 </div>
               </div>
 

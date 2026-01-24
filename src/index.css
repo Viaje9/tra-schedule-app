@@ -133,3 +133,13 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 .btn-press:active {
   transform: scale(0.98);
 }
+
+/* Hide scrollbar for wheel picker */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}

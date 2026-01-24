@@ -85,6 +85,27 @@ export interface DailyTrainTimetable {
     ArrivalTime: string;
     DepartureTime: string;
   };
+  DelayTime?: number; // 延誤分鐘數（即時資料）
+}
+
+// 車站即時到離站資料（StationLiveBoard）
+export interface StationLiveBoardItem {
+  StationID: string;
+  StationName: {
+    Zh_tw: string;
+    En: string;
+  };
+  TrainNo: string;
+  Direction: number;
+  TrainTypeID: string;
+  TrainTypeCode: string;
+  TrainTypeName: {
+    Zh_tw: string;
+    En: string;
+  };
+  ScheduledArrivalTime?: string;
+  ScheduledDepartureTime?: string;
+  DelayTime: number; // 延誤分鐘數
 }
 
 // 車次詳細時刻表
