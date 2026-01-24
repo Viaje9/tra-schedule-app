@@ -4,7 +4,9 @@ import { TimeRangePicker } from './components/TimeRangePicker';
 import { TrainList } from './components/TrainList';
 import { SettingsModal } from './components/SettingsModal';
 import { StationPicker } from './components/StationPicker';
+import { FavoriteRoutes } from './components/FavoriteRoutes';
 import { useStations, useODQuery } from './hooks/useTrainQuery';
+import { useFavoriteRoutes } from './hooks/useFavoriteRoutes';
 import { getTodayDate, hasCredentials } from './api/tdx';
 
 function App() {
@@ -19,6 +21,7 @@ function App() {
 
   const { stations, loading: stationsLoading, error: stationsError } = useStations();
   const { trains, loading: trainsLoading, error: trainsError, query: queryTrains } = useODQuery();
+  const { routes, addRoute, removeRoute, hasRoute, canAddMore, maxRoutes } = useFavoriteRoutes();
 
   const originStationName = useMemo(
     () => stations.find((s) => s.StationID === originStation)?.StationName.Zh_tw,
@@ -56,6 +59,17 @@ function App() {
   const handleStationSelect = (origin: string, destination: string) => {
     setOriginStation(origin);
     setDestinationStation(destination);
+  };
+
+  const handleSaveRoute = () => {
+    if (originStation && destinationStation && originStationName && destStationName) {
+      addRoute(originStation, destinationStation, originStationName, destStationName);
+    }
+  };
+
+  const handleSelectFavoriteRoute = (originId: string, destinationId: string) => {
+    setOriginStation(originId);
+    setDestinationStation(destinationId);
   };
 
   return (
@@ -166,6 +180,18 @@ function App() {
                   </div>
                 </button>
               </div>
+
+              {/* 常用路線 */}
+              <FavoriteRoutes
+                routes={routes}
+                canAddMore={canAddMore}
+                maxRoutes={maxRoutes}
+                canSave={!!originStation && !!destinationStation}
+                alreadyExists={hasRoute(originStation, destinationStation)}
+                onSelectRoute={handleSelectFavoriteRoute}
+                onSaveRoute={handleSaveRoute}
+                onRemoveRoute={removeRoute}
+              />
 
               {/* 日期選擇 */}
               <DatePicker value={trainDate} onChange={setTrainDate} />
