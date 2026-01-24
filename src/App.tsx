@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { DatePicker } from './components/DatePicker';
 import { TimeRangePicker } from './components/TimeRangePicker';
 import { TrainList } from './components/TrainList';
@@ -21,6 +21,14 @@ function App() {
 
   const { stations, loading: stationsLoading, error: stationsError } = useStations();
   const { trains, loading: trainsLoading, error: trainsError, query: queryTrains } = useODQuery();
+  const resultsRef = useRef<HTMLDivElement>(null);
+
+  // 查詢完成後自動滾動到結果區域
+  useEffect(() => {
+    if (!trainsLoading && trains.length > 0 && resultsRef.current) {
+      resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [trainsLoading, trains]);
   const { routes, addRoute, removeRoute, hasRoute, canAddMore, maxRoutes } = useFavoriteRoutes();
 
   const originStationName = useMemo(
@@ -236,6 +244,7 @@ function App() {
         </div>
 
         {/* 查詢結果 */}
+        <div ref={resultsRef} />
         {trains.length === 0 && !trainsLoading && !trainsError && (
           <div className="text-center py-16 animate-fade-in">
             <div className="text-gray-300 mb-4">
