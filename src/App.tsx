@@ -2,10 +2,9 @@ import { useState, useMemo } from 'react';
 import { DatePicker } from './components/DatePicker';
 import { TimeRangePicker } from './components/TimeRangePicker';
 import { TrainList } from './components/TrainList';
-import { TrainDetail } from './components/TrainDetail';
 import { SettingsModal } from './components/SettingsModal';
 import { StationPicker } from './components/StationPicker';
-import { useStations, useODQuery, useTrainDetail } from './hooks/useTrainQuery';
+import { useStations, useODQuery } from './hooks/useTrainQuery';
 import { getTodayDate, hasCredentials } from './api/tdx';
 
 function App() {
@@ -20,13 +19,6 @@ function App() {
 
   const { stations, loading: stationsLoading, error: stationsError } = useStations();
   const { trains, loading: trainsLoading, error: trainsError, query: queryTrains } = useODQuery();
-  const {
-    timetable,
-    loading: detailLoading,
-    error: detailError,
-    query: queryDetail,
-    reset: resetDetail,
-  } = useTrainDetail();
 
   const originStationName = useMemo(
     () => stations.find((s) => s.StationID === originStation)?.StationName.Zh_tw,
@@ -59,10 +51,6 @@ function App() {
   const handleSwapStations = () => {
     setOriginStation(destinationStation);
     setDestinationStation(originStation);
-  };
-
-  const handleTrainClick = (trainNo: string, date: string) => {
-    queryDetail(trainNo, date);
   };
 
   const handleStationSelect = (origin: string, destination: string) => {
@@ -237,7 +225,6 @@ function App() {
           trains={filteredTrains}
           loading={trainsLoading}
           error={trainsError}
-          onTrainClick={handleTrainClick}
         />
       </main>
 
@@ -251,14 +238,6 @@ function App() {
           onClose={() => setShowStationPicker(false)}
         />
       )}
-
-      {/* 車次詳情 Modal */}
-      <TrainDetail
-        timetable={timetable}
-        loading={detailLoading}
-        error={detailError}
-        onClose={resetDetail}
-      />
 
       {/* 設定 Modal */}
       <SettingsModal

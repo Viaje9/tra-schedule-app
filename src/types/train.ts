@@ -125,32 +125,6 @@ export interface TrainLiveBoardItem {
   DelayTime: number; // 延誤分鐘數
 }
 
-// 車次詳細時刻表
-export interface TrainTimetable {
-  TrainDate: string;
-  DailyTrainInfo: {
-    TrainNo: string;
-    Direction: number;
-    StartingStationID: string;
-    StartingStationName: {
-      Zh_tw: string;
-      En: string;
-    };
-    EndingStationID: string;
-    EndingStationName: {
-      Zh_tw: string;
-      En: string;
-    };
-    TrainTypeID: string;
-    TrainTypeCode: string;
-    TrainTypeName: {
-      Zh_tw: string;
-      En: string;
-    };
-  };
-  StopTimes: StopTime[];
-}
-
 // 查詢參數
 export interface QueryParams {
   originStation: string;

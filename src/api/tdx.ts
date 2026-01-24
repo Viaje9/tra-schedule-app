@@ -1,4 +1,4 @@
-import type { Station, DailyTrainTimetable, TrainTimetable, StationLiveBoardItem, TrainLiveBoardItem } from '../types/train';
+import type { Station, DailyTrainTimetable, StationLiveBoardItem, TrainLiveBoardItem } from '../types/train';
 
 const BASE_URL = 'https://tdx.transportdata.tw/api/basic/v3/Rail/TRA';
 const AUTH_URL = 'https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token';
@@ -229,35 +229,6 @@ export async function fetchODTimetable(
   });
 }
 
-// 車次詳細時刻表查詢
-export async function fetchTrainTimetable(
-  trainNo: string,
-  trainDate: string
-): Promise<TrainTimetable[]> {
-  const url = `${BASE_URL}/DailyTrainTimetable/TrainNo/${trainNo}/${trainDate}?$format=JSON`;
-
-  const response = await fetch(url, {
-    headers: await getHeaders(),
-  });
-
-  if (!response.ok) {
-    throw new Error(`查詢車次詳情失敗: ${response.status}`);
-  }
-
-  const data = await response.json();
-
-  // v3 API 返回格式: { TrainTimetables: [...] }
-  // v2 API 返回格式: [...]
-  if (Array.isArray(data)) {
-    return data;
-  }
-  if (data.TrainTimetables && Array.isArray(data.TrainTimetables)) {
-    return data.TrainTimetables;
-  }
-
-  return [];
-}
-
 // 計算行駛時間
 export function calculateDuration(departureTime: string, arrivalTime: string): string {
   const [depHour, depMin] = departureTime.split(':').map(Number);
@@ -418,4 +389,28 @@ export function mergeDelayInfo(
     ...train,
     DelayTime: delayMap.get(train.DailyTrainInfo.TrainNo),
   }));
+}
+
+// 取得所有車種資料
+export async function fetchTrainTypes(): Promise<any[]> {
+  const url = `${BASE_URL}/TrainType?$format=JSON`;
+
+  const response = await fetch(url, {
+    headers: await getHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`取得車種資料失敗: ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  // v3 API 返回格式: { TrainTypes: [...] }
+  if (Array.isArray(data)) {
+    return data;
+  } else if (data.TrainTypes && Array.isArray(data.TrainTypes)) {
+    return data.TrainTypes;
+  }
+
+  return [];
 }

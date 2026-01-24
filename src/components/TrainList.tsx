@@ -5,7 +5,6 @@ interface TrainListProps {
   trains: DailyTrainTimetable[];
   loading: boolean;
   error: string | null;
-  onTrainClick: (trainNo: string, trainDate: string) => void;
 }
 
 // 延誤狀態標籤
@@ -47,6 +46,22 @@ function addDelayToTime(time: string, delayMinutes: number): string {
   return `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
 }
 
+// 車種簡稱對應
+function getTrainTypeName(trainTypeCode: string): string {
+  switch (trainTypeCode) {
+    case '1': return '太魯閣';
+    case '2': return '普悠瑪';
+    case '3': return '自強';
+    case '4': return '莒光';
+    case '5': return '復興';
+    case '6': return '區間';
+    case '7': return '普快';
+    case '10': return '區間快';
+    case '11': return '新自強';
+    default: return '其他';
+  }
+}
+
 // 車種顏色對應
 function getTrainTypeStyle(trainTypeCode: string): { bg: string; text: string; accent: string } {
   switch (trainTypeCode) {
@@ -62,14 +77,18 @@ function getTrainTypeStyle(trainTypeCode: string): { bg: string; text: string; a
       return { bg: 'bg-violet-50', text: 'text-violet-700', accent: 'bg-violet-500' };
     case '6': // 區間
       return { bg: 'bg-slate-50', text: 'text-slate-600', accent: 'bg-slate-400' };
-    case '7': // 區間快
+    case '7': // 普快
+      return { bg: 'bg-amber-50', text: 'text-amber-700', accent: 'bg-amber-400' };
+    case '10': // 區間快
       return { bg: 'bg-cyan-50', text: 'text-cyan-700', accent: 'bg-cyan-500' };
+    case '11': // 新自強 (EMU3000)
+      return { bg: 'bg-indigo-50', text: 'text-indigo-700', accent: 'bg-indigo-500' };
     default:
       return { bg: 'bg-gray-50', text: 'text-gray-600', accent: 'bg-gray-400' };
   }
 }
 
-export function TrainList({ trains, loading, error, onTrainClick }: TrainListProps) {
+export function TrainList({ trains, loading, error }: TrainListProps) {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
@@ -118,11 +137,9 @@ export function TrainList({ trains, loading, error, onTrainClick }: TrainListPro
           const style = getTrainTypeStyle(train.DailyTrainInfo.TrainTypeCode);
 
           return (
-            <button
+            <div
               key={train.DailyTrainInfo.TrainNo}
-              type="button"
-              className="train-card w-full bg-white rounded-xl p-4 hover:shadow-lg hover:shadow-gray-200/50 transition-all duration-200 text-left border border-gray-100 group"
-              onClick={() => onTrainClick(train.DailyTrainInfo.TrainNo, train.TrainDate)}
+              className="train-card w-full bg-white rounded-xl p-4 border border-gray-100"
             >
               {/* 頂部：車種標籤 + 車次 + 行駛時間 */}
               <div className="flex items-center justify-between mb-4">
@@ -132,7 +149,7 @@ export function TrainList({ trains, loading, error, onTrainClick }: TrainListPro
                   </span>
                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-medium ${style.bg} ${style.text}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${style.accent}`}></span>
-                    {train.DailyTrainInfo.TrainTypeName.Zh_tw}
+                    {getTrainTypeName(train.DailyTrainInfo.TrainTypeCode)}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -168,7 +185,7 @@ export function TrainList({ trains, loading, error, onTrainClick }: TrainListPro
                       <div className="w-full border-t-2 border-dashed border-gray-200"></div>
                     </div>
                     <div className="relative bg-white px-2">
-                      <svg className="w-5 h-5 text-gray-300 group-hover:text-[#3b6bdf] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                       </svg>
                     </div>
@@ -189,7 +206,7 @@ export function TrainList({ trains, loading, error, onTrainClick }: TrainListPro
                   </div>
                 </div>
               </div>
-            </button>
+            </div>
           );
         })}
       </div>

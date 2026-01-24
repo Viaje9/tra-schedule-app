@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Station, DailyTrainTimetable, TrainTimetable } from '../types/train';
-import { fetchStations, fetchODTimetable, fetchTrainTimetable, fetchStationLiveBoard, fetchTrainLiveBoard, mergeDelayInfo, getTodayDate } from '../api/tdx';
+import type { Station, DailyTrainTimetable } from '../types/train';
+import { fetchStations, fetchODTimetable, fetchStationLiveBoard, fetchTrainLiveBoard, mergeDelayInfo, getTodayDate } from '../api/tdx';
 
 // 車站資料 Hook
 export function useStations() {
@@ -68,36 +68,4 @@ export function useODQuery() {
   }, []);
 
   return { trains, loading, error, query, reset };
-}
-
-// 車次詳情 Hook
-export function useTrainDetail() {
-  const [timetable, setTimetable] = useState<TrainTimetable | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const query = useCallback(async (trainNo: string, trainDate: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await fetchTrainTimetable(trainNo, trainDate);
-      if (data.length > 0) {
-        setTimetable(data[0]);
-      } else {
-        setError('找不到車次資料');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '查詢車次詳情失敗');
-      setTimetable(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const reset = useCallback(() => {
-    setTimetable(null);
-    setError(null);
-  }, []);
-
-  return { timetable, loading, error, query, reset };
 }
