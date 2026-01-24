@@ -1,3 +1,7 @@
+// 車站等級
+// 0: 特等站, 1: 一等站, 2: 二等站, 3: 三等站, 4: 簡易站
+export type StationClass = '0' | '1' | '2' | '3' | '4';
+
 // 車站資料
 export interface Station {
   StationID: string;
@@ -5,12 +9,25 @@ export interface Station {
     Zh_tw: string;
     En: string;
   };
+  StationClass: StationClass;
   StationAddress?: string;
   StationPosition?: {
     PositionLat: number;
     PositionLon: number;
   };
 }
+
+// 主要車站（特等、一等、二等）
+export const MAJOR_STATION_CLASSES: StationClass[] = ['0', '1', '2'];
+
+// 車站等級名稱
+export const STATION_CLASS_NAMES: Record<StationClass, string> = {
+  '0': '特等站',
+  '1': '一等站',
+  '2': '二等站',
+  '3': '三等站',
+  '4': '簡易站',
+};
 
 // 車種資料
 export interface TrainType {
