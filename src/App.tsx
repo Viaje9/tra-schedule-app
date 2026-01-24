@@ -85,7 +85,10 @@ function App() {
   return (
     <div className="min-h-screen bg-[#f3f4f6]">
       {/* Header */}
-      <header className="bg-[#2d3a4a] text-white">
+      <header
+        className="bg-[#2d3a4a] text-white"
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      >
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {/* Train Icon */}
