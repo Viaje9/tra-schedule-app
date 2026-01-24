@@ -37,14 +37,12 @@ export function useODQuery() {
   const query = useCallback(async (
     originStationId: string,
     destinationStationId: string,
-    trainDate: string = getTodayDate(),
-    originName?: string,
-    destName?: string
+    trainDate: string = getTodayDate()
   ) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await fetchODTimetable(originStationId, destinationStationId, trainDate, originName, destName);
+      const data = await fetchODTimetable(originStationId, destinationStationId, trainDate);
       setTrains(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : '查詢班次失敗');

@@ -113,92 +113,14 @@ export async function fetchStations(): Promise<Station[]> {
   return response.json();
 }
 
-// Demo 模式檢查
-export function isDemoMode(): boolean {
-  return !hasCredentials();
-}
-
-// 產生模擬班次資料
-function generateDemoTimetable(
-  originStationId: string,
-  destinationStationId: string,
-  trainDate: string,
-  originName: string,
-  destName: string
-): DailyTrainTimetable[] {
-  const trainTypes = [
-    { code: '1', name: '太魯閣', duration: 210 },
-    { code: '2', name: '普悠瑪', duration: 215 },
-    { code: '3', name: '自強', duration: 240 },
-    { code: '4', name: '莒光', duration: 300 },
-    { code: '6', name: '區間', duration: 360 },
-  ];
-
-  const baseHours = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
-
-  return baseHours.map((hour, index) => {
-    const trainType = trainTypes[index % trainTypes.length];
-    const depMin = Math.floor(Math.random() * 30);
-    const durationMin = trainType.duration + Math.floor(Math.random() * 30) - 15;
-
-    const depTime = `${hour.toString().padStart(2, '0')}:${depMin.toString().padStart(2, '0')}`;
-    const arrHour = hour + Math.floor((depMin + durationMin) / 60);
-    const arrMin = (depMin + durationMin) % 60;
-    const arrTime = `${arrHour.toString().padStart(2, '0')}:${arrMin.toString().padStart(2, '0')}`;
-
-    return {
-      TrainDate: trainDate,
-      DailyTrainInfo: {
-        TrainNo: `${100 + index}`,
-        Direction: 0,
-        TrainTypeID: trainType.code,
-        TrainTypeCode: trainType.code,
-        TrainTypeName: {
-          Zh_tw: trainType.name,
-          En: trainType.name,
-        },
-      },
-      OriginStopTime: {
-        StopSequence: 1,
-        StationID: originStationId,
-        StationName: {
-          Zh_tw: originName,
-          En: originName,
-        },
-        ArrivalTime: depTime,
-        DepartureTime: depTime,
-      },
-      DestinationStopTime: {
-        StopSequence: 10,
-        StationID: destinationStationId,
-        StationName: {
-          Zh_tw: destName,
-          En: destName,
-        },
-        ArrivalTime: arrTime,
-        DepartureTime: arrTime,
-      },
-    };
-  });
-}
-
 // 站對站時刻表查詢
 export async function fetchODTimetable(
   originStationId: string,
   destinationStationId: string,
-  trainDate: string,
-  originName?: string,
-  destName?: string
+  trainDate: string
 ): Promise<DailyTrainTimetable[]> {
-  // Demo 模式：返回模擬資料
-  if (isDemoMode()) {
-    return generateDemoTimetable(
-      originStationId,
-      destinationStationId,
-      trainDate,
-      originName || '起站',
-      destName || '訖站'
-    );
+  if (!hasCredentials()) {
+    throw new Error('請先設定 API 認證資訊');
   }
 
   const url = `${BASE_URL}/DailyTrainTimetable/OD/${originStationId}/to/${destinationStationId}/${trainDate}?$format=JSON`;

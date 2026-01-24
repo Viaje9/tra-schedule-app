@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import type { Station } from '../types/train';
-import { MAJOR_STATION_CLASSES } from '../types/train';
 
 interface StationPickerProps {
   stations: Station[];
@@ -10,14 +9,47 @@ interface StationPickerProps {
   onClose: () => void;
 }
 
-// 定義主要車站（按路線順序）
-const MAIN_STATIONS_LEFT = [
-  '基隆', '臺北', '新北', '桃園', '新竹', '苗栗', '臺中', '彰化', '南投', '雲林'
+// 城市排序（由北到南）
+const CITY_ORDER = [
+  '基隆市', '臺北市', '新北市', '桃園市', '新竹市', '新竹縣',
+  '苗栗縣', '臺中市', '彰化縣', '南投縣', '雲林縣',
+  '嘉義市', '嘉義縣', '臺南市', '高雄市', '屏東縣',
+  '臺東縣', '花蓮縣', '宜蘭縣'
 ];
 
-const MAIN_STATIONS_RIGHT = [
-  '嘉義', '臺南', '高雄', '屏東', '臺東', '花蓮', '宜蘭', '新左營', '板橋', '松山'
-];
+// 依城市分組車站
+function groupStationsByCity(stations: Station[]): Map<string, Station[]> {
+  const grouped = new Map<string, Station[]>();
+
+  stations.forEach(station => {
+    const city = station.LocationCity || '其他';
+    if (!grouped.has(city)) {
+      grouped.set(city, []);
+    }
+    grouped.get(city)!.push(station);
+  });
+
+  return grouped;
+}
+
+// 排序城市
+function sortCities(cities: string[]): string[] {
+  return cities.sort((a, b) => {
+    const indexA = CITY_ORDER.indexOf(a);
+    const indexB = CITY_ORDER.indexOf(b);
+
+    // 如果都在排序列表中，按列表順序
+    if (indexA !== -1 && indexB !== -1) {
+      return indexA - indexB;
+    }
+    // 如果只有 a 在列表中，a 排前面
+    if (indexA !== -1) return -1;
+    // 如果只有 b 在列表中，b 排前面
+    if (indexB !== -1) return 1;
+    // 都不在列表中，按字母順序
+    return a.localeCompare(b, 'zh-TW');
+  });
+}
 
 export function StationPicker({
   stations,
@@ -30,29 +62,24 @@ export function StationPicker({
   const [tempDestination, setTempDestination] = useState(destinationStation);
   const [activeField, setActiveField] = useState<'origin' | 'destination'>('origin');
   const [searchText, setSearchText] = useState('');
-  const [showSearch, setShowSearch] = useState(false);
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
 
   // 取得車站名稱
   const getStationName = (stationId: string) => {
     return stations.find(s => s.StationID === stationId)?.StationName.Zh_tw || '';
   };
 
-  // 根據名稱找車站
-  const findStationByName = (name: string) => {
-    return stations.find(s => s.StationName.Zh_tw === name);
-  };
-
-  // 主要車站列表（左欄）
-  const leftStations = useMemo(() => {
-    return MAIN_STATIONS_LEFT.map(name => findStationByName(name)).filter(Boolean) as Station[];
+  // 依城市分組
+  const stationsByCity = useMemo(() => {
+    return groupStationsByCity(stations);
   }, [stations]);
 
-  // 主要車站列表（右欄）
-  const rightStations = useMemo(() => {
-    return MAIN_STATIONS_RIGHT.map(name => findStationByName(name)).filter(Boolean) as Station[];
-  }, [stations]);
+  // 排序過的城市列表
+  const sortedCities = useMemo(() => {
+    return sortCities(Array.from(stationsByCity.keys()));
+  }, [stationsByCity]);
 
-  // 搜尋結果
+  // 搜尋結果（跨城市搜尋）
   const searchResults = useMemo(() => {
     if (!searchText) return [];
     const lowerSearch = searchText.toLowerCase();
@@ -60,7 +87,7 @@ export function StationPicker({
       s =>
         s.StationName.Zh_tw.includes(searchText) ||
         s.StationName.En.toLowerCase().includes(lowerSearch)
-    ).slice(0, 20);
+    ).slice(0, 30);
   }, [stations, searchText]);
 
   // 選擇車站
@@ -72,7 +99,7 @@ export function StationPicker({
       setTempDestination(station.StationID);
     }
     setSearchText('');
-    setShowSearch(false);
+    setSelectedCity(null);
   };
 
   // 交換起訖站
@@ -87,6 +114,11 @@ export function StationPicker({
     onClose();
   };
 
+  // 返回城市列表
+  const handleBackToCity = () => {
+    setSelectedCity(null);
+  };
+
   // 檢查是否為選中的車站
   const isSelected = (stationId: string) => {
     if (activeField === 'origin') {
@@ -95,45 +127,49 @@ export function StationPicker({
     return stationId === tempDestination;
   };
 
+  // 當前城市的車站列表
+  const currentCityStations = selectedCity ? stationsByCity.get(selectedCity) || [] : [];
+
   return (
     <div className="fixed inset-0 bg-white z-50 flex flex-col">
       {/* Header */}
       <div className="bg-teal-500 text-white px-4 py-3 flex items-center justify-between">
-        <button onClick={onClose} className="p-1">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <span className="text-lg font-medium">選擇車站</span>
-        <div className="flex items-center gap-3">
-          <button onClick={() => setShowSearch(!showSearch)} className="p-1">
+        {selectedCity ? (
+          <button onClick={handleBackToCity} className="p-1 flex items-center gap-1">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span className="text-sm">返回</span>
+          </button>
+        ) : (
+          <button onClick={onClose} className="p-1">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
-          <button
-            onClick={handleConfirm}
-            disabled={!tempOrigin || !tempDestination}
-            className="font-medium disabled:opacity-50"
-          >
-            確定
-          </button>
-        </div>
+        )}
+        <span className="text-lg font-medium">
+          {selectedCity ? selectedCity : '選擇車站'}
+        </span>
+        <button
+          onClick={handleConfirm}
+          disabled={!tempOrigin || !tempDestination}
+          className="font-medium disabled:opacity-50 px-2"
+        >
+          確定
+        </button>
       </div>
 
       {/* 搜尋框 */}
-      {showSearch && (
-        <div className="px-4 py-2 bg-gray-100 border-b">
-          <input
-            type="text"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
-            placeholder="搜尋車站..."
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            autoFocus
-          />
-        </div>
-      )}
+      <div className="px-4 py-2 bg-gray-100 border-b">
+        <input
+          type="text"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
+          placeholder="搜尋車站..."
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+        />
+      </div>
 
       {/* 起訖站顯示 */}
       <div className="px-4 py-3 bg-gray-50 border-b flex items-center gap-2">
@@ -175,7 +211,7 @@ export function StationPicker({
         </div>
       </div>
 
-      {/* 車站列表 */}
+      {/* 內容區域 */}
       <div className="flex-1 overflow-auto">
         {searchText ? (
           /* 搜尋結果 */
@@ -187,7 +223,12 @@ export function StationPicker({
                   onClick={() => handleStationClick(station)}
                   className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 text-left"
                 >
-                  <span className="text-gray-800">{station.StationName.Zh_tw}</span>
+                  <div>
+                    <span className="text-gray-800">{station.StationName.Zh_tw}</span>
+                    {station.LocationCity && (
+                      <span className="text-gray-400 text-sm ml-2">{station.LocationCity}</span>
+                    )}
+                  </div>
                   {isSelected(station.StationID) && (
                     <svg className="w-5 h-5 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -199,63 +240,50 @@ export function StationPicker({
               <div className="px-4 py-8 text-center text-gray-500">找不到符合的車站</div>
             )}
           </div>
+        ) : selectedCity ? (
+          /* 車站列表（第二層） */
+          <div className="divide-y">
+            {currentCityStations.map((station) => (
+              <button
+                key={station.StationID}
+                onClick={() => handleStationClick(station)}
+                className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 text-left"
+              >
+                <span className={isSelected(station.StationID) ? 'text-teal-600 font-medium' : 'text-gray-800'}>
+                  {station.StationName.Zh_tw}
+                </span>
+                {isSelected(station.StationID) && (
+                  <svg className="w-5 h-5 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </button>
+            ))}
+          </div>
         ) : (
-          /* 兩欄車站列表 */
-          <div className="flex divide-x h-full">
-            {/* 左欄 */}
-            <div className="flex-1 divide-y">
-              {leftStations.map((station) => (
+          /* 城市列表（第一層） */
+          <div className="divide-y">
+            {sortedCities.map((city) => {
+              const cityStations = stationsByCity.get(city) || [];
+              return (
                 <button
-                  key={station.StationID}
-                  onClick={() => handleStationClick(station)}
+                  key={city}
+                  onClick={() => setSelectedCity(city)}
                   className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 text-left"
                 >
-                  <span className={isSelected(station.StationID) ? 'text-teal-600 font-medium' : 'text-gray-800'}>
-                    {station.StationName.Zh_tw}
-                  </span>
-                  {isSelected(station.StationID) && (
-                    <svg className="w-5 h-5 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <span className="text-gray-800">{city}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-400 text-sm">({cityStations.length})</span>
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
-                  )}
+                  </div>
                 </button>
-              ))}
-            </div>
-
-            {/* 右欄 */}
-            <div className="flex-1 divide-y">
-              {rightStations.map((station) => (
-                <button
-                  key={station.StationID}
-                  onClick={() => handleStationClick(station)}
-                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 text-left"
-                >
-                  <span className={isSelected(station.StationID) ? 'text-teal-600 font-medium' : 'text-gray-800'}>
-                    {station.StationName.Zh_tw}
-                  </span>
-                  {isSelected(station.StationID) && (
-                    <svg className="w-5 h-5 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </button>
-              ))}
-            </div>
+              );
+            })}
           </div>
         )}
       </div>
-
-      {/* 提示：顯示更多車站 */}
-      {!searchText && (
-        <div className="px-4 py-2 bg-gray-100 border-t">
-          <button
-            onClick={() => setShowSearch(true)}
-            className="w-full text-center text-sm text-teal-600 hover:text-teal-700"
-          >
-            點擊搜尋查看更多車站
-          </button>
-        </div>
-      )}
     </div>
   );
 }

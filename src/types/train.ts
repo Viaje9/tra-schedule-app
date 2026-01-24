@@ -15,6 +15,7 @@ export interface Station {
     PositionLat: number;
     PositionLon: number;
   };
+  LocationCity?: string; // 城市名稱
 }
 
 // 主要車站（特等、一等、二等）

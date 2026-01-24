@@ -5,7 +5,7 @@ import { TrainDetail } from './components/TrainDetail';
 import { SettingsModal } from './components/SettingsModal';
 import { StationPicker } from './components/StationPicker';
 import { useStations, useODQuery, useTrainDetail } from './hooks/useTrainQuery';
-import { getTodayDate, isDemoMode } from './api/tdx';
+import { getTodayDate, hasCredentials } from './api/tdx';
 
 function App() {
   const [originStation, setOriginStation] = useState('');
@@ -37,7 +37,7 @@ function App() {
 
   const handleSearch = () => {
     if (originStation && destinationStation) {
-      queryTrains(originStation, destinationStation, trainDate, originStationName, destStationName);
+      queryTrains(originStation, destinationStation, trainDate);
     }
   };
 
@@ -80,23 +80,6 @@ function App() {
 
       {/* Main Content */}
       <main className="max-w-2xl mx-auto px-4 py-4">
-        {/* Demo 模式提示 */}
-        {isDemoMode() && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-            <p className="text-amber-800 text-sm">
-              <span className="font-medium">Demo 模式：</span>
-              目前使用模擬資料。
-              <button
-                type="button"
-                className="text-amber-600 underline hover:text-amber-800 ml-1"
-                onClick={() => setShowSettings(true)}
-              >
-                設定 API
-              </button>
-            </p>
-          </div>
-        )}
-
         {/* 查詢表單 */}
         <div className="bg-white rounded-xl shadow-md p-4 mb-4">
           {stationsLoading ? (
@@ -160,10 +143,25 @@ function App() {
                 type="button"
                 className="w-full bg-teal-500 hover:bg-teal-600 text-white font-medium py-3 px-4 rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                 onClick={handleSearch}
-                disabled={!originStation || !destinationStation || trainsLoading}
+                disabled={!originStation || !destinationStation || trainsLoading || !hasCredentials()}
               >
                 {trainsLoading ? '查詢中...' : '查詢班次'}
               </button>
+
+              {/* 未設定 API 提示 */}
+              {!hasCredentials() && (
+                <div className="text-center text-sm text-gray-500">
+                  請先
+                  <button
+                    type="button"
+                    className="text-teal-600 underline hover:text-teal-800 mx-1"
+                    onClick={() => setShowSettings(true)}
+                  >
+                    設定 API 認證
+                  </button>
+                  才能查詢班次
+                </div>
+              )}
             </div>
           )}
         </div>
