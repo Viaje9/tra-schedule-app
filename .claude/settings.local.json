@@ -1,18 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "mcp__chrome-devtools__list_console_messages",
-      "mcp__chrome-devtools__list_network_requests",
-      "mcp__chrome-devtools__take_snapshot",
-      "mcp__chrome-devtools__click",
-      "mcp__chrome-devtools__fill",
-      "mcp__chrome-devtools__wait_for",
-      "WebFetch(domain:tdx.transportdata.tw)",
-      "WebFetch(domain:data.gov.tw)",
-      "mcp__chrome-devtools__navigate_page",
-      "mcp__chrome-devtools__take_screenshot",
-      "mcp__chrome-devtools__get_network_request",
-      "mcp__chrome-devtools__evaluate_script"
+
     ]
   }
 }
