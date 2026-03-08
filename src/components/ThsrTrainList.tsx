@@ -177,6 +177,13 @@ export function ThsrTrainList({ trains, loading, error, trainDate }: ThsrTrainLi
               ref={isFirstAvailable ? firstAvailableRef : undefined}
               className={`train-card w-full bg-white rounded-xl p-4 border border-gray-100 ${departed ? 'opacity-60' : ''}`}
             >
+              <div className="text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 mb-3 inline-flex items-center gap-2">
+                <span>列車始終站：</span>
+                <span className="font-medium text-gray-700">
+                  {train.DailyTrainInfo.StartingStationName?.Zh_tw || train.OriginStopTime.StationName.Zh_tw} → {train.DailyTrainInfo.EndingStationName?.Zh_tw || train.DestinationStopTime.StationName.Zh_tw}
+                </span>
+              </div>
+
               {/* 頂部：車次 + 行駛時間 */}
               <div className="flex items-start justify-between mb-4">
                 <div className="flex flex-col items-start gap-1">
